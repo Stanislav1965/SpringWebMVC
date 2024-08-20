@@ -4,11 +4,11 @@ import org.springframework.stereotype.Repository;
 import ru.netology.exception.NotFoundException;
 import ru.netology.model.Post;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 @Repository
 public class PostRepositoryStubImpl implements PostRepository {
@@ -18,11 +18,13 @@ public class PostRepositoryStubImpl implements PostRepository {
 
 
     public List<Post> all() {
-        return new ArrayList<>(postTable.values());
+        return postTable.values().stream()
+                .filter(x -> !x.isRemoved())
+                .collect(Collectors.toList());
     }
 
     public Optional<Post> getById(long id) {
-        return Optional.of(Optional.ofNullable(postTable.get(id))
+        return Optional.of(Optional.ofNullable(postTable.get(id)).filter(a -> !postTable.get(id).isRemoved())
                 .orElseThrow(() -> new NotFoundException("Не найден пост с id= " + id)));
     }
 
@@ -34,7 +36,7 @@ public class PostRepositoryStubImpl implements PostRepository {
             return post;
         }
         long postKey = post.getId();
-        if (postTable.containsKey(postKey)) {
+        if (postTable.containsKey(postKey) && !postTable.get(postKey).isRemoved()) {
             postTable.put(postKey, post);
         } else {
             throw new NotFoundException("Нет поста для обновиления с id= " + postKey);
@@ -43,8 +45,8 @@ public class PostRepositoryStubImpl implements PostRepository {
     }
 
     public void removeById(long id) {
-        if (postTable.containsKey(id)) {
-            postTable.remove(id);
+        if (postTable.containsKey(id) && !postTable.get(id).isRemoved()) {
+            postTable.get(id).setRemoved(true);
         } else {
             throw new NotFoundException("При удалении не найден пост с id= " + id);
         }
